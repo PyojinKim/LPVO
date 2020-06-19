@@ -8,7 +8,7 @@ addpath('addon/lsd_1.6');
 addpath('addon/lsd_1.6/Matlab');
 
 
-%% basic setup for LAPO + DEMO
+%% basic setup for LPVO
 
 % choose the experiment case
 % ICSL RGBD dataset (1~XX)
@@ -16,12 +16,12 @@ expCase = 1;
 
 % are figures drawn?
 % 1 : yes, draw figures to see current status
-% 0 : no, just run LAPO + DEMO
+% 0 : no, just run LPVO
 toVisualize = 1;
 
 % are data results saved?
 % 1 : yes, save the variables and results
-% 0 : no, just run LAPO + DEMO
+% 0 : no, just run LPVO
 toSave = 1;
 
 
@@ -33,14 +33,13 @@ ICSLRGBDdataset = rawICSLRGBDdataset_load(datasetPath, imInit, M);
 
 
 % camera calibration parameters
-optsLAPO = load_param_LAPO;
-cam = initialize_cam_ICSL_RGBD(cameraType, optsLAPO.imagePyramidLevel);
+optsLPVO = load_param_LPVO;
+cam = initialize_cam_ICSL_RGBD(cameraType, optsLPVO.imagePyramidLevel);
 
 
-%% main LAPO + DEMO part
+%% main LPVO part
 
-
-% 1. feature tracking pre-defined variables for DEMO
+% 1. feature tracking pre-defined variables for LPVO
 systemInited_ft = false;
 
 imageHeight = 480;
@@ -91,20 +90,20 @@ imagePointsCur = cell(0);
 imagePointsLast = cell(0);
 
 
-% 2. Manhattan frame tracking for LAPO
-systemInited_LAPO = false;
+% 2. Manhattan frame tracking for LPVO
+systemInited_MF = false;
 
 R_gc1 = eye(3);
-R_gc_LAPO = zeros(3,3,M);
-R_gc_LAPO(:,:,1) = R_gc1;
+R_gc_LPVO = zeros(3,3,M);
+R_gc_LPVO(:,:,1) = R_gc1;
 
 
-% 3. frame to frame motion estimation pre-defined variables for DEMO
+% 3. frame to frame motion estimation pre-defined variables for LPVO
 systemInited_VO = false;
 
 T_gc_current = eye(4);
-T_gc_LAPODEMO = cell(1, M);
-T_gc_LAPODEMO{1} = T_gc_current;
+T_gc_LPVO = cell(1, M);
+T_gc_LPVO{1} = T_gc_current;
 
 
 % 4. make figures to visualize current status
@@ -122,7 +121,7 @@ if (toVisualize)
 end
 
 
-% do LAPO + DEMO
+% do LPVO
 for imgIdx = 1:M
     %% 1. feature tracking : re-assign variables for next ieration
     
@@ -282,35 +281,35 @@ for imgIdx = 1:M
     imageCurForLine = getImgInTUMRGBDdataset(datasetPath, ICSLRGBDdataset, cam, imgIdx, 'gray');
     imageCurForMW = getImgInTUMRGBDdataset(datasetPath, ICSLRGBDdataset, cam, imgIdx, 'rgb');
     depthCurForMW = getImgInTUMRGBDdataset(datasetPath, ICSLRGBDdataset, cam, imgIdx, 'depth');
-    [imageCurForMW, depthCurForMW] = getImgPyramid(imageCurForMW, depthCurForMW, optsLAPO.imagePyramidLevel);
+    [imageCurForMW, depthCurForMW] = getImgPyramid(imageCurForMW, depthCurForMW, optsLPVO.imagePyramidLevel);
     
     % vanishing direction vector
-    [vDV, linePairIdx, lines] = estimateVanishingDirectionGreatcircle(imageCurForLine, cam, optsLAPO);
+    [vDV, linePairIdx, lines] = estimateVanishingDirectionGreatcircle(imageCurForLine, cam, optsLPVO);
     
     % surface normal vector
-    [sNV, sPP] = estimateSurfaceNormalGradient_mex(imageCurForMW, depthCurForMW, cam, optsLAPO);
+    [sNV, sPP] = estimateSurfaceNormalGradient_mex(imageCurForMW, depthCurForMW, cam, optsLPVO);
     totalUnitVector = [sNV, vDV];
     
     
     % for the first time in this loop
-    if (~systemInited_LAPO)
+    if (~systemInited_MF)
         
         % initialize and seek the dominant MF
-        [MF_can, FindMF] = seekManhattanWorld(totalUnitVector, optsLAPO);
+        [MF_can, FindMF] = seekManhattanWorld(totalUnitVector, optsLPVO);
         if (FindMF == 1)
-            R_cM = ClusterMMF(MF_can, optsLAPO.ratio);
+            R_cM = ClusterMMF(MF_can, optsLPVO.ratio);
             if (isempty(R_cM) == 0)
                 R_cM = R_cM{1};
                 R_c1M = R_cM;
                 R_gM = R_gc1 * R_c1M;
-                systemInited_LAPO = true;
+                systemInited_MF = true;
                 disp('Initialization done!');
             end
         end
-    elseif (systemInited_LAPO)
+    elseif (systemInited_MF)
         
         % tracking MF
-        [R_cM, isTracked] = trackManhattanWorld_LAPO(R_cM, sNV, vDV, optsLAPO);
+        [R_cM, isTracked] = trackManhattanWorld_LPVO(R_cM, sNV, vDV, optsLPVO);
         
         % if lost tracking
         if (isTracked == 0)
@@ -320,12 +319,12 @@ for imgIdx = 1:M
         end
         
         % check MF tracking
-        [R_cM, isTracked] = checkManhattanFrameTracking(R_cM, sNV, vDV, optsLAPO);
+        [R_cM, isTracked] = checkManhattanFrameTracking(R_cM, sNV, vDV, optsLPVO);
         
         
         % update current camera pose
         R_gc_current = R_gM * inv(R_cM);
-        R_gc_LAPO(:,:,imgIdx) = R_gc_current;
+        R_gc_LPVO(:,:,imgIdx) = R_gc_current;
     end
     
     
@@ -338,7 +337,7 @@ for imgIdx = 1:M
         %% 3. frame to frame motion estimation : find relationship between points
         
         depthImageTemp = getImgInTUMRGBDdataset(datasetPath, ICSLRGBDdataset, cam, imgIdx-1, 'depth');
-        ipRelations = findPointTrackingResult(imagePointsLast, imagePointsCur, depthImageTemp, imgIdx, cam, optsLAPO);
+        ipRelations = findPointTrackingResult(imagePointsLast, imagePointsCur, depthImageTemp, imgIdx, cam, optsLPVO);
         
         
         %% 3. frame to frame motion estimation : estimate 6 DoF motion
@@ -346,19 +345,19 @@ for imgIdx = 1:M
         if (isTracked)
             
             % interpret the rotational motion [R]
-            R_21 = inv(R_gc_LAPO(:,:,imgIdx)) * R_gc_LAPO(:,:,imgIdx-1);
+            R_21 = inv(R_gc_LPVO(:,:,imgIdx)) * R_gc_LPVO(:,:,imgIdx-1);
             
             % estimate the translational motion [t]
-            xi_21 = estimatePoseTranslation(R_21, ipRelations, cam, optsLAPO);
+            xi_21 = estimatePoseTranslation(R_21, ipRelations, cam, optsLPVO);
         else
             
             % estimate the rotational and translational motion [R,t]
-            xi_21 = estimatePoseRotationTranslation(ipRelations, cam, optsLAPO);
+            xi_21 = estimatePoseRotationTranslation(ipRelations, cam, optsLPVO);
             
             % re-arrange rotation information
             R_21 = angle2rotmtx([xi_21(4); xi_21(5); xi_21(6)]);
-            R_gc_LAPO(:,:,imgIdx) = R_gc_LAPO(:,:,imgIdx-1) * inv(R_21);
-            R_cM = inv(R_gc_LAPO(:,:,imgIdx)) * R_gM;
+            R_gc_LPVO(:,:,imgIdx) = R_gc_LPVO(:,:,imgIdx-1) * inv(R_21);
+            R_cM = inv(R_gc_LPVO(:,:,imgIdx)) * R_gM;
         end
         
         
@@ -384,61 +383,57 @@ for imgIdx = 1:M
             0, 0, 0, 1];
         
         T_gc_current = T_gc_current * inv(T_21);
-        T_gc_LAPODEMO{imgIdx} = T_gc_current;
+        T_gc_LPVO{imgIdx} = T_gc_current;
         
         
         % visualize current status
-        plots_status;
+        plots_ICSL_RGBD;
     end
     
     
 end
 
 % convert camera pose representation
-stateEsti_LAPODEMO = zeros(6,M);
-R_gc_LAPODEMO = zeros(3,3,M);
+stateEsti_LPVO = zeros(6,M);
+R_gc_LPVO = zeros(3,3,M);
 for k = 1:M
-    R_gc_LAPODEMO(:,:,k) = T_gc_LAPODEMO{k}(1:3,1:3);
-    stateEsti_LAPODEMO(1:3,k) = T_gc_LAPODEMO{k}(1:3,4);
-    [yaw, pitch, roll] = dcm2angle(R_gc_LAPODEMO(:,:,k));
-    stateEsti_LAPODEMO(4:6,k) = [roll; pitch; yaw];
+    R_gc_LPVO(:,:,k) = T_gc_LPVO{k}(1:3,1:3);
+    stateEsti_LPVO(1:3,k) = T_gc_LPVO{k}(1:3,4);
+    [yaw, pitch, roll] = dcm2angle(R_gc_LPVO(:,:,k));
+    stateEsti_LPVO(4:6,k) = [roll; pitch; yaw];
 end
 
 
 %% plot error metric value (RPE, ATE)
 
 
-% 1) LAPO + DEMO motion estimation trajectory results
+% 1) LPVO motion estimation trajectory results
 figure;
-plot3(stateEsti_LAPODEMO(1,:),stateEsti_LAPODEMO(2,:),stateEsti_LAPODEMO(3,:),'r','LineWidth',2); grid on;
-legend('LAPODEMO Matlab'); plot_inertial_frame(0.5); axis equal; view(-158, 38);
+plot3(stateEsti_LPVO(1,:),stateEsti_LPVO(2,:),stateEsti_LPVO(3,:),'r','LineWidth',2); grid on;
+legend('LPVO Matlab'); plot_inertial_frame(0.5); axis equal; view(-158, 38);
 xlabel('x [m]','fontsize',10); ylabel('y [m]','fontsize',10); zlabel('z [m]','fontsize',10); hold off;
 
 
-% 2) LAPO + DEMO motion estimation trajectory results
+% 2) LPVO motion estimation trajectory results
 figure;
 subplot(3,2,1);
-plot(stateEsti_LAPODEMO(1,:),'r','LineWidth',2); grid on; axis tight; ylabel('x (m)');
-legend('LAPODEMO Matlab');
+plot(stateEsti_LPVO(1,:),'r','LineWidth',2); grid on; axis tight; ylabel('x (m)');
+legend('LPVO Matlab');
 subplot(3,2,3);
-plot(stateEsti_LAPODEMO(2,:),'r','LineWidth',2); grid on; axis tight; ylabel('y (m)');
+plot(stateEsti_LPVO(2,:),'r','LineWidth',2); grid on; axis tight; ylabel('y (m)');
 subplot(3,2,5);
-plot(stateEsti_LAPODEMO(3,:),'r','LineWidth',2); grid on; axis tight; ylabel('z (m)');
+plot(stateEsti_LPVO(3,:),'r','LineWidth',2); grid on; axis tight; ylabel('z (m)');
 subplot(3,2,2);
-plot(stateEsti_LAPODEMO(4,:),'r','LineWidth',2); grid on; axis tight; ylabel('roll (rad)');
+plot(stateEsti_LPVO(4,:),'r','LineWidth',2); grid on; axis tight; ylabel('roll (rad)');
 subplot(3,2,4);
-plot(stateEsti_LAPODEMO(5,:),'r','LineWidth',2); grid on; axis tight; ylabel('pitch (rad)');
+plot(stateEsti_LPVO(5,:),'r','LineWidth',2); grid on; axis tight; ylabel('pitch (rad)');
 subplot(3,2,6);
-plot(stateEsti_LAPODEMO(6,:),'r','LineWidth',2); grid on; axis tight; ylabel('yaw (rad)');
-
-
-% 3) final drift error of LAPO + DEMO
-EPE_LAPODEMO = norm(stateEsti_LAPODEMO(1:3,1) - stateEsti_LAPODEMO(1:3,end));
+plot(stateEsti_LPVO(6,:),'r','LineWidth',2); grid on; axis tight; ylabel('yaw (rad)');
 
 
 %% save the experiment data for ICRA 2018
 
 if (toSave)
-    save([SaveDir '/LAPODEMO.mat']);
+    save([SaveDir '/LPVO.mat']);
 end
 
