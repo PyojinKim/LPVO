@@ -27,11 +27,11 @@ You can use estimateSurfaceNormalGradient.m instead if you cannot compile MEX fi
 # 3. Usage
 * Download the ICL-NUIM dataset from https://www.doc.ic.ac.uk/~ahanda/VaFRIC/iclnuim.html, 'of kt3' is recommended.
 
-* Or, Use the ICL-NUIMdataset/of_kt3/ included in this package.
+* Or, Use the ICSLRGBDdataset/rgbd_dataset_302_09_square3/ included in this package.
 
-* Define 'datasetPath' correctly in your directory at setupParams_ICL_NUIM.m file.
+* Define 'datasetPath' correctly in your directory at setupParams_ICSL_RGBD.m file.
 
-* Run LPVO_core/main_script_ICL_NUIM.m, which will give you the 3D motion estimation result. Enjoy! :)
+* Run LPVO_core/main_script_ICSL_RGBD.m, which will give you the 3D motion estimation result. Enjoy! :)
 
 
 # 4. Publications

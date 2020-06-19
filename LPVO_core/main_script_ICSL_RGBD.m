@@ -406,7 +406,6 @@ end
 
 %% plot error metric value (RPE, ATE)
 
-
 % 1) LPVO motion estimation trajectory results
 figure;
 plot3(stateEsti_LPVO(1,:),stateEsti_LPVO(2,:),stateEsti_LPVO(3,:),'r','LineWidth',2); grid on;
