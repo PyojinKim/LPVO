@@ -1,7 +1,7 @@
-function plot_vDV_unit_sphere(radius, R_cM, vanishingDirectionVector, optsLAPO)
+function plot_vDV_unit_sphere(radius, R_cM, vanishingDirectionVector, optsLPVO)
 
 % assign parameters
-halfApexAngleVD = optsLAPO.halfApexAngleVD;
+halfApexAngleVD = optsLPVO.halfApexAngleVD;
 
 
 %% project vanishing direction vectors to each Manhattan frame axis

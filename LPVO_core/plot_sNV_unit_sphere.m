@@ -1,7 +1,7 @@
-function plot_sNV_unit_sphere(radius, R_cM, surfaceNormalVector, optsLAPO)
+function plot_sNV_unit_sphere(radius, R_cM, surfaceNormalVector, optsLPVO)
 
 % assign parameters
-halfApexAngleNV = optsLAPO.halfApexAngleNV;
+halfApexAngleNV = optsLPVO.halfApexAngleNV;
 
 
 %% project normal vectors to each Manhattan frame axis
